@@ -1,10 +1,3 @@
-//
-//  Location.swift
-//  HealthApp
-//
-//  Created by Atif Ahmad on 2/10/26.
-//
-
 import SwiftUI
 import MapKit
 import CoreLocation

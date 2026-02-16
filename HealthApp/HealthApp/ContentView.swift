@@ -1,10 +1,3 @@
-//
-//  ContentView.swift
-//  HealthApp
-//
-//  Created by Atif Ahmad on 2/6/26.
-//
-
 import SwiftUI
 
 struct ContentView: View {

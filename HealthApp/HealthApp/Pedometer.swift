@@ -1,10 +1,3 @@
-//
-//  Pedometer.swift
-//  HealthApp
-//
-//  Created by Atif Ahmad on 2/10/26.
-//
-
 import HealthKit
 import SwiftUI
 
@@ -91,7 +84,8 @@ struct StepCounterView: View {
                         
                         // Refresh button
                         Button(action: {
-                            recommendationEngine.refreshRecommendation()
+                            healthKitManager.fetchTodaySteps()
+                            recommendationEngine.refreshRecommendation(currentStepCount: healthKitManager.stepCount)
                         }) {
                             Image(systemName: "arrow.clockwise")
                                 .foregroundColor(.blue)
@@ -126,6 +120,34 @@ struct StepCounterView: View {
                             .foregroundColor(.red)
                             .font(.caption)
                             .multilineTextAlignment(.center)
+                    }
+                }
+                .padding()
+                .frame(maxWidth: .infinity)
+                .background(Color(.systemGray6))
+                .cornerRadius(12)
+                .padding(.horizontal)
+                
+                // Sleep Logged Today Section
+                VStack(spacing: 12) {
+                    HStack {
+                        Image(systemName: "bed.double.fill")
+                            .foregroundColor(.purple)
+                        Text("Sleep Logged Today")
+                            .font(.headline)
+                    }
+                    
+                    if let entry = mostRecentSleepEntry, let hours = Double(entry.sleep.trimmingCharacters(in: .whitespaces)), hours > 0 && hours <= 24 {
+                        Text("\(hours == floor(hours) ? String(format: "%.0f", hours) : String(format: "%.1f", hours)) hours")
+                            .font(.system(size: 28, weight: .semibold))
+                            .foregroundColor(.purple)
+                        Text("Logged at \(entry.date.formatted(date: .omitted, time: .shortened))")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                    } else {
+                        Text("No sleep logged yet today")
+                            .font(.body)
+                            .foregroundColor(.secondary)
                     }
                 }
                 .padding()
@@ -194,7 +216,18 @@ struct StepCounterView: View {
         .onAppear {
             healthKitManager.requestAuthorization()
             locationManager.requestLocationPermission()
+            recommendationEngine.refreshRecommendation(currentStepCount: healthKitManager.stepCount)
         }
+        .onChange(of: healthKitManager.stepCount) {
+            recommendationEngine.refreshRecommendation(currentStepCount: healthKitManager.stepCount)
+        }
+    }
+    
+    private var mostRecentSleepEntry: HealthData? {
+        dataManager.getTodayEntries()
+            .filter { !$0.sleep.trimmingCharacters(in: .whitespaces).isEmpty }
+            .sorted { $0.date > $1.date }
+            .first
     }
     
     private var todaysFoodEntries: [HealthData] {

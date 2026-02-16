@@ -1,10 +1,3 @@
-//
-//  UserInputs.swift
-//  HealthApp
-//
-//  Created by Atif Ahmad on 2/11/26.
-//
-
 import SwiftUI
 
 struct HealthData: Codable, Identifiable {
@@ -69,6 +62,15 @@ class HealthDataManager : ObservableObject {
         guard let data = userDefaults.data(forKey: dataKey),
               let decoded = try? JSONDecoder().decode([HealthData].self, from: data) else { return[] }
         return decoded
+    }
+    
+    func deleteEntry(id: UUID) {
+        var allData = getAllData()
+        allData.removeAll { $0.id == id }
+        if let encoded = try? JSONEncoder().encode(allData) {
+            userDefaults.set(encoded, forKey: dataKey)
+            objectWillChange.send()
+        }
     }
 }
 
@@ -194,9 +196,18 @@ struct UserInputView : View {
                         
                         ForEach(dataManager.getTodayEntries()) { entry in
                             VStack(alignment: .leading, spacing: 8) {
-                                Text(entry.date, style: .time)
-                                    .font(.caption)
-                                    .foregroundColor(.secondary)
+                                HStack {
+                                    Text(entry.date, style: .time)
+                                        .font(.caption)
+                                        .foregroundColor(.secondary)
+                                    Spacer()
+                                    Button(role: .destructive) {
+                                        dataManager.deleteEntry(id: entry.id)
+                                    } label: {
+                                        Image(systemName: "trash")
+                                            .font(.subheadline)
+                                    }
+                                }
                                 
                                 if !entry.food.isEmpty {
                                     HStack(alignment: .top) {
@@ -257,7 +268,13 @@ struct UserInputView : View {
                 
                 Spacer()
             }
+            .frame(maxWidth: .infinity)
+            .contentShape(Rectangle())
+            .onTapGesture {
+                UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
+            }
         }
+        .scrollDismissesKeyboard(.interactively)
         .onAppear {
             healthKitManager.requestAuthorization()
             locationManager.requestLocationPermission()
