@@ -8,6 +8,7 @@ struct ContentView: View {
         case stepCounter
         case location
         case userInput
+        case settings
     }
     
     var body: some View {
@@ -21,6 +22,8 @@ struct ContentView: View {
                     LocationView()
                 case .userInput:
                     UserInputView()
+                case .settings:
+                    SettingsView()
                 }
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -115,6 +118,17 @@ struct SideMenuView: View {
                     isSelected: selectedPage == .userInput
                 ) {
                     selectedPage = .userInput
+                    withAnimation {
+                        isMenuOpen = false
+                    }
+                }
+                
+                MenuItemView(
+                    icon: "gearshape.fill",
+                    title: "Settings",
+                    isSelected: selectedPage == .settings
+                ) {
+                    selectedPage = .settings
                     withAnimation {
                         isMenuOpen = false
                     }
