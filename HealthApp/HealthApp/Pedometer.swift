@@ -1,5 +1,6 @@
 import HealthKit
 import SwiftUI
+import CoreLocation
 
 class HealthKitManager : ObservableObject {
     private let healthStore = HKHealthStore()
@@ -84,8 +85,7 @@ struct StepCounterView: View {
                         
                         // Refresh button
                         Button(action: {
-                            healthKitManager.fetchTodaySteps()
-                            recommendationEngine.refreshRecommendation(currentStepCount: healthKitManager.stepCount)
+                            recommendationEngine.refreshRecommendation()
                         }) {
                             Image(systemName: "arrow.clockwise")
                                 .foregroundColor(.blue)
@@ -128,34 +128,6 @@ struct StepCounterView: View {
                 .cornerRadius(12)
                 .padding(.horizontal)
                 
-                // Sleep Logged Today Section
-                VStack(spacing: 12) {
-                    HStack {
-                        Image(systemName: "bed.double.fill")
-                            .foregroundColor(.purple)
-                        Text("Sleep Logged Today")
-                            .font(.headline)
-                    }
-                    
-                    if let entry = mostRecentSleepEntry, let hours = Double(entry.sleep.trimmingCharacters(in: .whitespaces)), hours > 0 && hours <= 24 {
-                        Text("\(hours == floor(hours) ? String(format: "%.0f", hours) : String(format: "%.1f", hours)) hours")
-                            .font(.system(size: 28, weight: .semibold))
-                            .foregroundColor(.purple)
-                        Text("Logged at \(entry.date.formatted(date: .omitted, time: .shortened))")
-                            .font(.caption)
-                            .foregroundColor(.secondary)
-                    } else {
-                        Text("No sleep logged yet today")
-                            .font(.body)
-                            .foregroundColor(.secondary)
-                    }
-                }
-                .padding()
-                .frame(maxWidth: .infinity)
-                .background(Color(.systemGray6))
-                .cornerRadius(12)
-                .padding(.horizontal)
-                
                 // Home Status Section
                 VStack(spacing: 12) {
                     HStack {
@@ -175,29 +147,29 @@ struct StepCounterView: View {
                 .cornerRadius(12)
                 .padding(.horizontal)
                 
-                // Food Eaten Today Section
+                // Calories Consumed Today Section
                 VStack(alignment: .leading, spacing: 12) {
                     HStack {
                         Image(systemName: "fork.knife")
                             .foregroundColor(.orange)
-                        Text("Food Eaten Today")
+                        Text("Calories Consumed Today")
                             .font(.headline)
                     }
                     .padding(.horizontal)
                     
-                    if todaysFoodEntries.isEmpty {
-                        Text("No food logged yet today")
+                    if todaysCalorieEntries.isEmpty {
+                        Text("No calories logged yet today")
                             .foregroundColor(.secondary)
                             .padding()
                             .frame(maxWidth: .infinity)
                     } else {
-                        ForEach(todaysFoodEntries) { entry in
-                            if !entry.food.isEmpty {
+                        ForEach(todaysCalorieEntries) { entry in
+                            if entry.calories > 0 {
                                 VStack(alignment: .leading, spacing: 4) {
                                     Text(entry.date.formatted(date: .omitted, time: .standard))
                                         .font(.caption)
                                         .foregroundColor(.secondary)
-                                    Text(entry.food)
+                                    Text("\(entry.calories) calories")
                                         .font(.body)
                                 }
                                 .padding()
@@ -206,6 +178,21 @@ struct StepCounterView: View {
                                 .cornerRadius(8)
                             }
                         }
+                        .padding(.horizontal)
+                        
+                        // Total calories for the day
+                        HStack {
+                            Text("Total Today:")
+                                .font(.headline)
+                            Spacer()
+                            Text("\(totalCaloriesToday) calories")
+                                .font(.title3)
+                                .fontWeight(.bold)
+                                .foregroundColor(.orange)
+                        }
+                        .padding()
+                        .background(Color.orange.opacity(0.1))
+                        .cornerRadius(8)
                         .padding(.horizontal)
                     }
                 }
@@ -216,22 +203,15 @@ struct StepCounterView: View {
         .onAppear {
             healthKitManager.requestAuthorization()
             locationManager.requestLocationPermission()
-            recommendationEngine.refreshRecommendation(currentStepCount: healthKitManager.stepCount)
-        }
-        .onChange(of: healthKitManager.stepCount) {
-            recommendationEngine.refreshRecommendation(currentStepCount: healthKitManager.stepCount)
         }
     }
     
-    private var mostRecentSleepEntry: HealthData? {
-        dataManager.getTodayEntries()
-            .filter { !$0.sleep.trimmingCharacters(in: .whitespaces).isEmpty }
-            .sorted { $0.date > $1.date }
-            .first
+    private var todaysCalorieEntries: [HealthData] {
+        dataManager.getTodayEntries().filter { $0.calories > 0 }
     }
     
-    private var todaysFoodEntries: [HealthData] {
-        dataManager.getTodayEntries().filter { !$0.food.isEmpty }
+    private var totalCaloriesToday: Int {
+        dataManager.getTodayEntries().reduce(0) { $0 + $1.calories }
     }
     
     private var locationStatusText: String {
