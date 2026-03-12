@@ -72,20 +72,17 @@ struct StepCounterView: View {
                     .padding(.horizontal)
                     .padding(.top)
                 
-                // Recommendation Section (Top Priority)
-                VStack(alignment: .leading, spacing: 12) {
+                VStack(alignment: .leading, spacing: 14) {
                     HStack {
                         Image(systemName: "lightbulb.fill")
                             .foregroundColor(.yellow)
                             .font(.title2)
-                        Text("Recommendation")
+                        Text("Recommendations")
                             .font(.headline)
-                        
                         Spacer()
-                        
-                        // Refresh button
                         Button(action: {
-                            recommendationEngine.refreshRecommendation()
+                            healthKitManager.fetchTodaySteps()
+                            recommendationEngine.refreshRecommendation(currentStepCount: healthKitManager.stepCount)
                         }) {
                             Image(systemName: "arrow.clockwise")
                                 .foregroundColor(.blue)
@@ -93,12 +90,41 @@ struct StepCounterView: View {
                         }
                     }
                     
-                    Text(recommendationEngine.currentRecommendation)
-                        .font(.body)
-                        .padding()
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                        .background(Color.blue.opacity(0.1))
+                    if recommendationEngine.topRecommendations.isEmpty {
+                        Text("Loading...")
+                            .font(.body)
+                            .foregroundColor(.secondary)
+                            .padding()
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .background(Color(.systemGray6))
+                            .cornerRadius(12)
+                    } else {
+                        VStack(spacing: 0) {
+                            ForEach(Array(recommendationEngine.topRecommendations.enumerated()), id: \.offset) { index, text in
+                                HStack(alignment: .center, spacing: 0) {
+                                    RoundedRectangle(cornerRadius: 2)
+                                        .fill(rankAccentColor(index))
+                                        .frame(width: 4)
+                                        .padding(.vertical, 4)
+                                    Text(text)
+                                        .font(index == 0 ? .body.weight(.semibold) : .subheadline)
+                                        .foregroundColor(.primary)
+                                        .multilineTextAlignment(.leading)
+                                        .padding(.leading, 12)
+                                        .padding(.vertical, 10)
+                                    Spacer(minLength: 0)
+                                }
+                                .background(Color(.systemBackground))
+                                if index < recommendationEngine.topRecommendations.count - 1 {
+                                    Divider()
+                                        .padding(.leading, 16)
+                                }
+                            }
+                        }
+                        .padding(4)
+                        .background(Color(.systemGray6))
                         .cornerRadius(12)
+                    }
                 }
                 .padding(.horizontal)
                 
@@ -203,6 +229,18 @@ struct StepCounterView: View {
         .onAppear {
             healthKitManager.requestAuthorization()
             locationManager.requestLocationPermission()
+            recommendationEngine.refreshRecommendation(currentStepCount: healthKitManager.stepCount)
+        }
+        .onChange(of: healthKitManager.stepCount) {
+            recommendationEngine.refreshRecommendation(currentStepCount: healthKitManager.stepCount)
+        }
+    }
+    
+    private func rankAccentColor(_ index: Int) -> Color {
+        switch index {
+        case 0: return Color.green
+        case 1: return Color.blue
+        default: return Color(.systemGray)
         }
     }
     
